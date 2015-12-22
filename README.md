@@ -2,7 +2,7 @@
 
 A Go package for working with Who's On First concordances
 
-# Caveats
+## Caveats
 
 This is still a work in progress.
 
