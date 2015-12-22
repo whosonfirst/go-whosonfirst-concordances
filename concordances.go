@@ -87,60 +87,12 @@ func CrawlConcordances(root string, dothis CrawlFunc, include_wofid bool) {
 			return nil
 		}
 
-		feature, err := geojson.UnmarshalFile(source)
+		concordances, err := LoadConcordances(source, include_wofid)
 
-		if err != nil {
-			// fmt.Println(source, err)
-			return err
+		if err == nil {
+			dothis(concordances)
 		}
 
-		body := feature.Body()
-		props, _ := body.S("properties").ChildrenMap()
-
-		concordances := make(map[string]string)
-
-		if include_wofid {
-			wof_id := feature.Id()
-			str_id := strconv.Itoa(wof_id)
-			concordances["wof:id"] = str_id
-		}
-
-		for key, child := range props {
-
-			if key != "wof:concordances" {
-				continue
-			}
-
-			possible, _ := child.ChildrenMap()
-
-			for src, id := range possible {
-
-				var str_id string
-				var float_id float64
-				var ok bool
-
-				str_id, ok = id.Data().(string)
-
-				if ok {
-					concordances[src] = str_id
-					continue
-				}
-
-				float_id, ok = id.Data().(float64)
-
-				if ok {
-					str_id := strconv.FormatFloat(float_id, 'f', -1, 64)
-					concordances[src] = str_id
-					continue
-				}
-
-				fmt.Printf("failed to handle %s=%v\n", src, id)
-			}
-
-			break
-		}
-
-		dothis(concordances)
 		return nil
 	}
 
@@ -148,4 +100,64 @@ func CrawlConcordances(root string, dothis CrawlFunc, include_wofid bool) {
 	_ = c.Crawl(callback)
 
 	wg.Wait()
+}
+
+// please to be caching me... (20151221/thisisaaronland)
+
+func LoadConcordances(path string, include_wofid bool) (map[string]string, error) {
+
+	concordances := make(map[string]string)
+
+	feature, err := geojson.UnmarshalFile(path)
+
+	if err != nil {
+		// fmt.Println(source, err)
+		return concordances, err
+	}
+
+	body := feature.Body()
+	props, _ := body.S("properties").ChildrenMap()
+
+	if include_wofid {
+		wof_id := feature.Id()
+		str_id := strconv.Itoa(wof_id)
+		concordances["wof:id"] = str_id
+	}
+
+	for key, child := range props {
+
+		if key != "wof:concordances" {
+			continue
+		}
+
+		possible, _ := child.ChildrenMap()
+
+		for src, id := range possible {
+
+			var str_id string
+			var float_id float64
+			var ok bool
+
+			str_id, ok = id.Data().(string)
+
+			if ok {
+				concordances[src] = str_id
+				continue
+			}
+
+			float_id, ok = id.Data().(float64)
+
+			if ok {
+				str_id := strconv.FormatFloat(float_id, 'f', -1, 64)
+				concordances[src] = str_id
+				continue
+			}
+
+			fmt.Printf("failed to handle %s=%v\n", src, id)
+		}
+
+		break
+	}
+
+	return concordances, nil
 }
