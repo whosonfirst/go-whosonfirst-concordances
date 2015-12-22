@@ -25,7 +25,7 @@ func ListConcordances(root string) []string {
 		}
 	}
 
-	CrawlConcordances(root, dothis, false)
+	CrawlConcordances(root, dothis)
 
 	for name, _ := range tmp {
 		concordances = append(concordances, name)
@@ -37,11 +37,12 @@ func ListConcordances(root string) []string {
 func WriteConcordances(root string, out io.Writer) {
 
 	possible := ListConcordances(root)
-	possible = append(possible, "wof:id")
 
 	writer := csv.NewWriter(out)
 	writer.Write(possible)
 	writer.Flush()
+
+	mu := sync.Mutex{}
 
 	dothis := func(concordances map[string]string) {
 
@@ -64,17 +65,17 @@ func WriteConcordances(root string, out io.Writer) {
 		}
 
 		if matches > 1 { // wof:id
-			// fmt.Println(row)
+			mu.Lock()
 			writer.Write(row)
-			writer.Flush()
+			mu.Unlock()
 		}
 	}
 
-	CrawlConcordances(root, dothis, true)
+	CrawlConcordances(root, dothis)
 	writer.Flush()
 }
 
-func CrawlConcordances(root string, dothis CrawlFunc, include_wofid bool) {
+func CrawlConcordances(root string, dothis CrawlFunc) {
 
 	wg := new(sync.WaitGroup)
 
@@ -87,10 +88,12 @@ func CrawlConcordances(root string, dothis CrawlFunc, include_wofid bool) {
 			return nil
 		}
 
-		concordances, err := LoadConcordances(source, include_wofid)
+		concordances, err := LoadConcordances(source)
 
 		if err == nil {
 			dothis(concordances)
+		} else {
+			fmt.Println(err)
 		}
 
 		return nil
@@ -104,7 +107,7 @@ func CrawlConcordances(root string, dothis CrawlFunc, include_wofid bool) {
 
 // please to be caching me... (20151221/thisisaaronland)
 
-func LoadConcordances(path string, include_wofid bool) (map[string]string, error) {
+func LoadConcordances(path string) (map[string]string, error) {
 
 	concordances := make(map[string]string)
 
@@ -118,11 +121,9 @@ func LoadConcordances(path string, include_wofid bool) (map[string]string, error
 	body := feature.Body()
 	props, _ := body.S("properties").ChildrenMap()
 
-	if include_wofid {
-		wof_id := feature.Id()
-		str_id := strconv.Itoa(wof_id)
-		concordances["wof:id"] = str_id
-	}
+	wof_id := feature.Id()
+	str_id := strconv.Itoa(wof_id)
+	concordances["wof:id"] = str_id
 
 	for key, child := range props {
 

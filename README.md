@@ -4,7 +4,11 @@ A Go package for working with Who's On First concordances
 
 ## Caveats
 
-This is still a work in progress.
+This is still a work in progress. Things that are lacking include (in no particular order):
+
+* Caching
+* Logging
+* Documentation
 
 ## Usage
 
