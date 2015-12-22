@@ -106,6 +106,7 @@ func CrawlConcordances(root string, dothis CrawlFunc) {
 }
 
 // please to be caching me... (20151221/thisisaaronland)
+// to investigate: https://github.com/patrickmn/go-cache
 
 func LoadConcordances(path string) (map[string]string, error) {
 
