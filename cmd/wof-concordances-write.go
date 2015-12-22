@@ -10,7 +10,7 @@ import (
 func main() {
 
 	var source = flag.String("source", "https://whosonfirst.mapzen.com/data/", "Where to look for files")
-	var procs = flag.Int("processes", 100, "Number of concurrent processes to use")
+	var procs = flag.Int("processes", runtime.NumCPU() * 2, "Number of concurrent processes to use")
 
 	flag.Parse()
 
