@@ -16,3 +16,4 @@ fmt:
 
 bin:	self
 	go build -o bin/wof-concordances-list cmd/wof-concordances-list.go
+	go build -o bin/wof-concordances-write cmd/wof-concordances-write.go

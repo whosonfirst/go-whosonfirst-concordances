@@ -2,6 +2,10 @@
 
 A Go package for working with Who's On First concordances
 
+# Caveats
+
+This is still a work in progress.
+
 ## Usage
 
 _Please write me_
