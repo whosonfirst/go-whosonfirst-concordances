@@ -1,0 +1,38 @@
+#!/bin/sh
+
+# all keys containing colons are converted to underbars
+# for example and "wof:id" becomes "wof_id" and so on
+
+# to simply index wof:id you would do
+# csv2sqlite /usr/local/mapzen/whosonfirst-data/meta/wof-concordances-latest.csv concordances-admin.db
+
+# to index wof:id and gp:id and gn:id you would do
+# csv2sqlite /usr/local/mapzen/whosonfirst-data/meta/wof-concordances-latest.csv concordances-admin.db gp:id,gn:id
+
+# see the way we're passing keys with colons <-- the code tries to take care of that
+
+SQLITE=`which sqlite3`
+
+CONCORDANCES=$1
+DB=$2
+INDEXES=$3
+
+WORK="${CONCORDANCES}.work"
+cp ${CONCORDANCES} ${WORK}
+
+SPEC=`head -n 1 ${WORK} | tr ':' '_' | sed 's/,/ TEXT,/g' | sed 's/wof_id TEXT/wof_id INTEGER PRIMARY KEY/' | sed 's/gp_id TEXT/gp_id INTEGER/' | sed 's/gn_id TEXT/gn_id INTEGER/'`
+
+${SQLITE} ${DB} "CREATE TABLE concordances (${SPEC})"
+
+for IDX in `echo ${INDEXES} | tr ',' '\n'`
+do
+    IDX=`echo ${IDX} | tr ':' '_'`
+    ${SQLITE} ${DB} 'CREATE INDEX `by_'${IDX}'` ON concordances (`'${IDX}'`)'
+done
+
+sed -i 1d ${WORK}
+
+${SQLITE} ${DB} -cmd '.mode csv' ".import ${WORK} concordances"
+
+rm ${WORK}
+exit 1
