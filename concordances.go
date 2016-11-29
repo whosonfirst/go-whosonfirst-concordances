@@ -2,7 +2,7 @@ package concordances
 
 import (
 	"encoding/csv"
-	"fmt"
+	_ "fmt"
 	crawl "github.com/whosonfirst/go-whosonfirst-crawl"
 	geojson "github.com/whosonfirst/go-whosonfirst-geojson"
 	"io"
@@ -18,10 +18,14 @@ func ListConcordances(root string) []string {
 	tmp := make(map[string]int)
 	concordances := make([]string, 0)
 
+	mu := sync.Mutex{}
+
 	dothis := func(concordances map[string]string) {
 
 		for src, _ := range concordances {
+			mu.Lock()
 			tmp[src] += 1
+			mu.Unlock()
 		}
 	}
 
@@ -78,6 +82,7 @@ func WriteConcordances(root string, out io.Writer) {
 func CrawlConcordances(root string, dothis CrawlFunc) {
 
 	wg := new(sync.WaitGroup)
+	mu := sync.Mutex{}
 
 	callback := func(source string, info os.FileInfo) error {
 
@@ -88,12 +93,12 @@ func CrawlConcordances(root string, dothis CrawlFunc) {
 			return nil
 		}
 
-		concordances, err := LoadConcordances(source)
+		concordances, err := LoadConcordances(source, mu)
 
 		if err == nil {
 			dothis(concordances)
 		} else {
-			fmt.Println(err)
+			// fmt.Println(err)
 		}
 
 		return nil
@@ -108,7 +113,7 @@ func CrawlConcordances(root string, dothis CrawlFunc) {
 // please to be caching me... (20151221/thisisaaronland)
 // to investigate: https://github.com/patrickmn/go-cache
 
-func LoadConcordances(path string) (map[string]string, error) {
+func LoadConcordances(path string, mu sync.Mutex) (map[string]string, error) {
 
 	concordances := make(map[string]string)
 
@@ -124,7 +129,10 @@ func LoadConcordances(path string) (map[string]string, error) {
 
 	wof_id := feature.Id()
 	str_id := strconv.Itoa(wof_id)
+
+	mu.Lock()
 	concordances["wof:id"] = str_id
+	mu.Unlock()
 
 	for key, child := range props {
 
@@ -142,6 +150,8 @@ func LoadConcordances(path string) (map[string]string, error) {
 
 			str_id, ok = id.Data().(string)
 
+			mu.Lock()
+
 			if ok {
 				concordances[src] = str_id
 				continue
@@ -155,7 +165,9 @@ func LoadConcordances(path string) (map[string]string, error) {
 				continue
 			}
 
-			fmt.Printf("failed to handle %s=%v\n", src, id)
+			mu.Unlock()
+
+			// fmt.Printf("failed to handle %s=%v\n", src, id)
 		}
 
 		break
