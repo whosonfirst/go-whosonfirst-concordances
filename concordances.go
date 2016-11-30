@@ -6,9 +6,11 @@ import (
 	crawl "github.com/whosonfirst/go-whosonfirst-crawl"
 	geojson "github.com/whosonfirst/go-whosonfirst-geojson"
 	"io"
+	_ "log"
 	"os"
 	"strconv"
 	"sync"
+	_ "time"
 )
 
 type CrawlFunc func(concordance map[string]string)
@@ -22,11 +24,14 @@ func ListConcordances(root string) []string {
 
 	dothis := func(concordances map[string]string) {
 
+		mu.Lock()
+
 		for src, _ := range concordances {
-			mu.Lock()
+
 			tmp[src] += 1
-			mu.Unlock()
 		}
+
+		mu.Unlock()
 	}
 
 	CrawlConcordances(root, dothis)
@@ -49,8 +54,6 @@ func WriteConcordances(root string, out io.Writer) {
 	mu := sync.Mutex{}
 
 	dothis := func(concordances map[string]string) {
-
-		// fmt.Println(concordances)
 
 		row := make([]string, 0)
 		matches := 0
@@ -81,24 +84,23 @@ func WriteConcordances(root string, out io.Writer) {
 
 func CrawlConcordances(root string, dothis CrawlFunc) {
 
-	wg := new(sync.WaitGroup)
-	mu := sync.Mutex{}
+	// wg := new(sync.WaitGroup)
 
 	callback := func(source string, info os.FileInfo) error {
 
-		wg.Add(1)
-		defer wg.Done()
+		//  wg.Add(1)
+		// defer wg.Done()
 
 		if info.IsDir() {
 			return nil
 		}
 
-		concordances, err := LoadConcordances(source, mu)
+		concordances, err := LoadConcordances(source)
 
 		if err == nil {
 			dothis(concordances)
 		} else {
-			// fmt.Println(err)
+			// log.Println(err)
 		}
 
 		return nil
@@ -107,13 +109,13 @@ func CrawlConcordances(root string, dothis CrawlFunc) {
 	c := crawl.NewCrawler(root)
 	_ = c.Crawl(callback)
 
-	wg.Wait()
+	// wg.Wait()
 }
 
 // please to be caching me... (20151221/thisisaaronland)
 // to investigate: https://github.com/patrickmn/go-cache
 
-func LoadConcordances(path string, mu sync.Mutex) (map[string]string, error) {
+func LoadConcordances(path string) (map[string]string, error) {
 
 	concordances := make(map[string]string)
 
@@ -130,9 +132,7 @@ func LoadConcordances(path string, mu sync.Mutex) (map[string]string, error) {
 	wof_id := feature.Id()
 	str_id := strconv.Itoa(wof_id)
 
-	mu.Lock()
 	concordances["wof:id"] = str_id
-	mu.Unlock()
 
 	for key, child := range props {
 
@@ -150,8 +150,6 @@ func LoadConcordances(path string, mu sync.Mutex) (map[string]string, error) {
 
 			str_id, ok = id.Data().(string)
 
-			mu.Lock()
-
 			if ok {
 				concordances[src] = str_id
 				continue
@@ -164,8 +162,6 @@ func LoadConcordances(path string, mu sync.Mutex) (map[string]string, error) {
 				concordances[src] = str_id
 				continue
 			}
-
-			mu.Unlock()
 
 			// fmt.Printf("failed to handle %s=%v\n", src, id)
 		}
