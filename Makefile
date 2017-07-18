@@ -14,8 +14,9 @@ rmdeps:
 	if test -d src; then rm -rf src; fi 
 
 deps:
+	@GOPATH=$(GOPATH) go get -u "github.com/tidwall/gjson"
 	@GOPATH=$(GOPATH) go get -u "github.com/whosonfirst/go-whosonfirst-crawl"
-	@GOPATH=$(GOPATH) go get -u "github.com/whosonfirst/go-whosonfirst-geojson"
+	@GOPATH=$(GOPATH) go get -u "github.com/facebookgo/atomicfile"
 
 vendor-deps: rmdeps deps
 	if test ! -d vendor; then mkdir vendor; fi
@@ -32,3 +33,4 @@ fmt:
 bin:	self
 	@GOPATH=$(GOPATH) go build -o bin/wof-concordances-list cmd/wof-concordances-list.go
 	@GOPATH=$(GOPATH) go build -o bin/wof-concordances-write cmd/wof-concordances-write.go
+	@GOPATH=$(GOPATH) go build -o bin/wof-build-concordances cmd/wof-build-concordances.go

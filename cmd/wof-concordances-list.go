@@ -3,7 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
-	concordances "github.com/whosonfirst/go-whosonfirst-concordances"
+	"github.com/whosonfirst/go-whosonfirst-concordances"
+	"log"
 	"os"
 	"runtime"
 	"strings"
@@ -18,8 +19,12 @@ func main() {
 
 	runtime.GOMAXPROCS(*procs)
 
-	list := concordances.ListConcordances(*source)
-	fmt.Println(strings.Join(list, ","))
+	list, err := concordances.ListConcordances(*source)
 
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(strings.Join(list, ","))
 	os.Exit(0)
 }

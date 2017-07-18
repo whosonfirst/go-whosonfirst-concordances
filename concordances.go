@@ -2,50 +2,57 @@ package concordances
 
 import (
 	"encoding/csv"
-	_ "fmt"
-	crawl "github.com/whosonfirst/go-whosonfirst-crawl"
-	geojson "github.com/whosonfirst/go-whosonfirst-geojson"
+	"errors"
+	"github.com/tidwall/gjson"
+	"github.com/whosonfirst/go-whosonfirst-crawl"
 	"io"
+	"io/ioutil"
 	_ "log"
 	"os"
-	"strconv"
 	"sync"
-	_ "time"
 )
 
-type CrawlFunc func(concordance map[string]string)
+type CrawlFunc func(concordance map[string]string) error
 
-func ListConcordances(root string) []string {
+func ListConcordances(root string) ([]string, error) {
 
 	tmp := make(map[string]int)
 	concordances := make([]string, 0)
 
 	mu := sync.Mutex{}
 
-	dothis := func(concordances map[string]string) {
+	dothis := func(concordances map[string]string) error {
 
 		mu.Lock()
 
 		for src, _ := range concordances {
-
 			tmp[src] += 1
 		}
 
 		mu.Unlock()
+		return nil
 	}
 
-	CrawlConcordances(root, dothis)
+	err := CrawlConcordances(root, dothis)
+
+	if err != nil {
+		return concordances, err
+	}
 
 	for name, _ := range tmp {
 		concordances = append(concordances, name)
 	}
 
-	return concordances
+	return concordances, nil
 }
 
-func WriteConcordances(root string, out io.Writer) {
+func WriteConcordances(root string, out io.Writer) error {
 
-	possible := ListConcordances(root)
+	possible, err := ListConcordances(root)
+
+	if err != nil {
+		return err
+	}
 
 	writer := csv.NewWriter(out)
 	writer.Write(possible)
@@ -53,7 +60,7 @@ func WriteConcordances(root string, out io.Writer) {
 
 	mu := sync.Mutex{}
 
-	dothis := func(concordances map[string]string) {
+	dothis := func(concordances map[string]string) error {
 
 		row := make([]string, 0)
 		matches := 0
@@ -76,20 +83,23 @@ func WriteConcordances(root string, out io.Writer) {
 			writer.Write(row)
 			mu.Unlock()
 		}
+
+		return nil
 	}
 
-	CrawlConcordances(root, dothis)
+	err = CrawlConcordances(root, dothis)
+
+	if err != nil {
+		return err
+	}
+
 	writer.Flush()
+	return nil
 }
 
-func CrawlConcordances(root string, dothis CrawlFunc) {
-
-	// wg := new(sync.WaitGroup)
+func CrawlConcordances(root string, dothis CrawlFunc) error {
 
 	callback := func(source string, info os.FileInfo) error {
-
-		//  wg.Add(1)
-		// defer wg.Done()
 
 		if info.IsDir() {
 			return nil
@@ -97,76 +107,41 @@ func CrawlConcordances(root string, dothis CrawlFunc) {
 
 		concordances, err := LoadConcordances(source)
 
-		if err == nil {
-			dothis(concordances)
-		} else {
-			// log.Println(err)
+		if err != nil {
+			return err
 		}
 
-		return nil
+		return dothis(concordances)
 	}
 
 	c := crawl.NewCrawler(root)
-	_ = c.Crawl(callback)
-
-	// wg.Wait()
+	return c.Crawl(callback)
 }
-
-// please to be caching me... (20151221/thisisaaronland)
-// to investigate: https://github.com/patrickmn/go-cache
 
 func LoadConcordances(path string) (map[string]string, error) {
 
 	concordances := make(map[string]string)
 
-	feature, err := geojson.UnmarshalFile(path)
+	fh, err := os.Open(path)
 
 	if err != nil {
-		// fmt.Println(source, err)
 		return concordances, err
 	}
 
-	body := feature.Body()
-	props, _ := body.S("properties").ChildrenMap()
+	feature, err := ioutil.ReadAll(fh)
 
-	wof_id := feature.Id()
-	str_id := strconv.Itoa(wof_id)
+	if err != nil {
+		return concordances, err
+	}
 
-	concordances["wof:id"] = str_id
+	r := gjson.GetBytes(feature, "properties.wof:concordances")
 
-	for key, child := range props {
+	if !r.Exists() {
+		return concordances, errors.New("Feature missing a wof:concordances property")
+	}
 
-		if key != "wof:concordances" {
-			continue
-		}
-
-		possible, _ := child.ChildrenMap()
-
-		for src, id := range possible {
-
-			var str_id string
-			var float_id float64
-			var ok bool
-
-			str_id, ok = id.Data().(string)
-
-			if ok {
-				concordances[src] = str_id
-				continue
-			}
-
-			float_id, ok = id.Data().(float64)
-
-			if ok {
-				str_id := strconv.FormatFloat(float_id, 'f', -1, 64)
-				concordances[src] = str_id
-				continue
-			}
-
-			// fmt.Printf("failed to handle %s=%v\n", src, id)
-		}
-
-		break
+	for k, v := range r.Map() {
+		concordances[k] = v.String()
 	}
 
 	return concordances, nil
