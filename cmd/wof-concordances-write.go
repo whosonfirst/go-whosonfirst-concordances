@@ -3,11 +3,14 @@ package main
 import (
 	"flag"
 	concordances "github.com/whosonfirst/go-whosonfirst-concordances"
+	"log"
 	"os"
 	"runtime"
 )
 
 func main() {
+
+	log.Println("This tool is officially deprecated. Please use wof-build-concordances instead.")
 
 	var source = flag.String("source", "https://whosonfirst.mapzen.com/data/", "Where to look for files")
 	var procs = flag.Int("processes", runtime.NumCPU()*2, "Number of concurrent processes to use")

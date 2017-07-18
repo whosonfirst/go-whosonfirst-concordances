@@ -144,5 +144,8 @@ func LoadConcordances(path string) (map[string]string, error) {
 		concordances[k] = v.String()
 	}
 
+	r = gjson.GetBytes(feature, "properties.wof:id")
+	concordances["wof:id"] = r.String()
+
 	return concordances, nil
 }
