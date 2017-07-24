@@ -2,7 +2,7 @@ package concordances
 
 import (
 	"encoding/csv"
-	"errors"
+	_ "errors"
 	"github.com/tidwall/gjson"
 	"github.com/whosonfirst/go-whosonfirst-crawl"
 	"io"
@@ -137,7 +137,7 @@ func LoadConcordances(path string) (map[string]string, error) {
 	r := gjson.GetBytes(feature, "properties.wof:concordances")
 
 	if !r.Exists() {
-		return concordances, errors.New("Feature missing a wof:concordances property")
+		return concordances, nil
 	}
 
 	for k, v := range r.Map() {
