@@ -97,14 +97,12 @@ func main() {
 	//    concordances files (below)
 	// (20170726/thisisaaronland)
 
-	fname := r.ConcordancesFilename()
-	log.Println(fname)
+	opts := repo.DefaultFilenameOptions()
+	fname := r.ConcordancesFilename(opts)
+
 	fname = strings.Replace(fname, "-all-", "-", -1)
-	log.Println(fname)
 
 	outfile := filepath.Join(abs_meta, fname)
-
-	log.Fatal(outfile)
 
 	fh, err := atomicfile.New(outfile, os.FileMode(0644))
 

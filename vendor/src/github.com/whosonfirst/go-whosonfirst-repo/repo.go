@@ -21,6 +21,21 @@ type DataRepo struct {
 	Filter    string // PLEASE DON'T CALL ME 'Filter' ...
 }
 
+type FilenameOptions struct {
+	Placetype string
+	Dated     bool
+}
+
+func DefaultFilenameOptions() *FilenameOptions {
+
+	o := FilenameOptions{
+		Placetype: "",
+		Dated:     false,
+	}
+
+	return &o
+}
+
 func NewDataRepoFromPath(path string) (*DataRepo, error) {
 
 	abs_path, err := filepath.Abs(path)
@@ -133,22 +148,20 @@ func (r *DataRepo) String() string {
 	return strings.Join(parts, "-")
 }
 
-func (r *DataRepo) MetaFilename(args ...string) string {
+func (r *DataRepo) MetaFilename(opts *FilenameOptions) string {
 
-	var pt string
-
-	if len(args) == 0 || args[0] == "" {
+	if opts.Placetype == "" {
 		if r.Placetype == "" {
-			pt = "all"
+			opts.Placetype = "all"
 		} else {
-			pt = r.Placetype
+			opts.Placetype = r.Placetype
 		}
-	} else {
-		pt = args[0]
 	}
 
+	// not sure the template shouldn't just be rolled in here...
 	template := r.MetaFilenameTemplate()
-	return fmt.Sprintf(template, pt)
+
+	return fmt.Sprintf(template, opts.Placetype)
 }
 
 func (r *DataRepo) MetaFilenameTemplate() string {
@@ -178,29 +191,36 @@ func (r *DataRepo) MetaFilenameTemplate() string {
 		parts = append(parts, r.Filter)
 	}
 
-	parts = append(parts, "latest.csv")
+	// unfortunately this is still-necessary legacy code - this
+	// should be removed when we stop including meta/* files in
+	// the WOF repos... (20170726/thisisaaronland)
+
+	if r.Source == "whosonfirst" {
+		parts = append(parts, "latest.csv")
+	} else {
+		parts = append(parts, "meta.csv")
+	}
+
 	return strings.Join(parts, "-")
 }
 
-func (r *DataRepo) ConcordancesFilename(args ...string) string {
+func (r *DataRepo) ConcordancesFilename(opts *FilenameOptions) string {
 
-	var pt string
-
-	if len(args) == 0 || args[0] == "" {
+	if opts.Placetype == "" {
 		if r.Placetype == "" {
-			pt = "all"
+			opts.Placetype = "all"
 		} else {
-			pt = r.Placetype
+			opts.Placetype = r.Placetype
 		}
-	} else {
-		pt = args[0]
 	}
 
-	template := r.ConcordancesFilenameTemplate(pt)
-	return fmt.Sprintf(template, pt)
+	// not sure the template shouldn't just be rolled in here...
+	template := r.ConcordancesFilenameTemplate()
+
+	return fmt.Sprintf(template, opts.Placetype)
 }
 
-func (r *DataRepo) ConcordancesFilenameTemplate(pt string) string {
+func (r *DataRepo) ConcordancesFilenameTemplate() string {
 
 	parts := make([]string, 0)
 
@@ -227,8 +247,16 @@ func (r *DataRepo) ConcordancesFilenameTemplate(pt string) string {
 		parts = append(parts, r.Filter)
 	}
 
-	parts = append(parts, "concordances")
-	parts = append(parts, "latest.csv")
+	// unfortunately this is still-necessary legacy code - this
+	// should be removed when we stop including meta/* files in
+	// the WOF repos... (20170726/thisisaaronland)
+
+	if r.Source == "whosonfirst" {
+		parts = append(parts, "concordances")
+		parts = append(parts, "latest.csv")
+	} else {
+		parts = append(parts, "concordances.csv")
+	}
 
 	return strings.Join(parts, "-")
 }
