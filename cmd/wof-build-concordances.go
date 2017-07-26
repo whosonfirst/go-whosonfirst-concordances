@@ -91,20 +91,20 @@ func main() {
 
 	// end of sudo put me in a helper function
 
-	template := r.ConcordancesNameTemplate()
-	fname := fmt.Sprintf(template, "all")
-
 	// THIS IS A HACK in advance of
 	// a) removing pre-generated concordances from repos
 	// b) updating the WriteConcordances logic to generate per-placetype
 	//    concordances files (below)
 	// (20170726/thisisaaronland)
 
-	if r.Source == "whosonfirst" {
-		fname = strings.Replace(fname, "-all-", "-", -1)
-	}
+	fname := r.ConcordancesFilename()
+	log.Println(fname)
+	fname = strings.Replace(fname, "-all-", "-", -1)
+	log.Println(fname)
 
 	outfile := filepath.Join(abs_meta, fname)
+
+	log.Fatal(outfile)
 
 	fh, err := atomicfile.New(outfile, os.FileMode(0644))
 

@@ -2,6 +2,7 @@ package repo
 
 import (
 	"errors"
+	"fmt"
 	"github.com/whosonfirst/go-whosonfirst-placetypes"
 	"path/filepath"
 	"strings"
@@ -132,7 +133,25 @@ func (r *DataRepo) String() string {
 	return strings.Join(parts, "-")
 }
 
-func (r *DataRepo) MetafileNameTemplate() string {
+func (r *DataRepo) MetaFilename(args ...string) string {
+
+	var pt string
+
+	if len(args) == 0 || args[0] == "" {
+		if r.Placetype == "" {
+			pt = "all"
+		} else {
+			pt = r.Placetype
+		}
+	} else {
+		pt = args[0]
+	}
+
+	template := r.MetaFilenameTemplate()
+	return fmt.Sprintf(template, pt)
+}
+
+func (r *DataRepo) MetaFilenameTemplate() string {
 
 	parts := make([]string, 0)
 
@@ -145,11 +164,7 @@ func (r *DataRepo) MetafileNameTemplate() string {
 		parts = append(parts, r.Source)
 	}
 
-	if r.Placetype == "" {
-		parts = append(parts, "%s")
-	} else {
-		parts = append(parts, r.Placetype)
-	}
+	parts = append(parts, "%s")
 
 	if r.Country != "" {
 		parts = append(parts, r.Country)
@@ -167,7 +182,25 @@ func (r *DataRepo) MetafileNameTemplate() string {
 	return strings.Join(parts, "-")
 }
 
-func (r *DataRepo) ConcordancesNameTemplate() string {
+func (r *DataRepo) ConcordancesFilename(args ...string) string {
+
+	var pt string
+
+	if len(args) == 0 || args[0] == "" {
+		if r.Placetype == "" {
+			pt = "all"
+		} else {
+			pt = r.Placetype
+		}
+	} else {
+		pt = args[0]
+	}
+
+	template := r.ConcordancesFilenameTemplate(pt)
+	return fmt.Sprintf(template, pt)
+}
+
+func (r *DataRepo) ConcordancesFilenameTemplate(pt string) string {
 
 	parts := make([]string, 0)
 
@@ -180,11 +213,7 @@ func (r *DataRepo) ConcordancesNameTemplate() string {
 		parts = append(parts, r.Source)
 	}
 
-	if r.Placetype == "" {
-		parts = append(parts, "%s")
-	} else {
-		parts = append(parts, r.Placetype)
-	}
+	parts = append(parts, "%s")
 
 	if r.Country != "" {
 		parts = append(parts, r.Country)
