@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 )
 
 func main() {
@@ -90,10 +91,19 @@ func main() {
 
 	// end of sudo put me in a helper function
 
-	test := r.ConcordancesNameTemplate()
-	log.Println(test)
+	template := r.ConcordancesNameTemplate()
+	fname := fmt.Sprintf(template, "all")
 
-	fname := "wof-concordances-latest.csv"
+	// THIS IS A HACK in advance of
+	// a) removing pre-generated concordances from repos
+	// b) updating the WriteConcordances logic to generate per-placetype
+	//    concordances files (below)
+	// (20170726/thisisaaronland)
+
+	if r.Source == "whosonfirst" {
+		fname = strings.Replace(fname, "-all-", "-", -1)
+	}
+
 	outfile := filepath.Join(abs_meta, fname)
 
 	fh, err := atomicfile.New(outfile, os.FileMode(0644))
