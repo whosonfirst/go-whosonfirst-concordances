@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/facebookgo/atomicfile"
 	"github.com/whosonfirst/go-whosonfirst-concordances"
+	"github.com/whosonfirst/go-whosonfirst-repo"
 	"log"
 	"os"
 	"path/filepath"
@@ -13,7 +14,7 @@ import (
 
 func main() {
 
-	repo := flag.String("repo", "", "Where to read data (to create metafiles) from. If empty then the code will assume the current working directory.")
+	root := flag.String("repo", "", "Where to read data (to create metafiles) from. If empty then the code will assume the current working directory.")
 	out := flag.String("out", "", "Where to store metafiles. If empty then assume metafile are created in a child folder of 'repo' called 'meta'.")
 
 	var procs = flag.Int("processes", runtime.NumCPU()*2, "Number of concurrent processes to use")
@@ -24,7 +25,7 @@ func main() {
 
 	// sudo put me in a helper function
 
-	if *repo == "" {
+	if *root == "" {
 
 		cwd, err := os.Getwd()
 
@@ -32,10 +33,10 @@ func main() {
 			log.Fatal(err)
 		}
 
-		*repo = cwd
+		*root = cwd
 	}
 
-	abs_repo, err := filepath.Abs(*repo)
+	abs_repo, err := filepath.Abs(*root)
 
 	if err != nil {
 		log.Fatal(err)
@@ -49,6 +50,12 @@ func main() {
 
 	if !info.IsDir() {
 		log.Fatal(fmt.Sprintf("Invalid repo directory (%s)", abs_repo))
+	}
+
+	r, err := repo.NewDataRepoFromPath(abs_repo)
+
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	var abs_meta string
@@ -82,6 +89,9 @@ func main() {
 	}
 
 	// end of sudo put me in a helper function
+
+	test := r.ConcordancesNameTemplate()
+	log.Println(test)
 
 	fname := "wof-concordances-latest.csv"
 	outfile := filepath.Join(abs_meta, fname)
