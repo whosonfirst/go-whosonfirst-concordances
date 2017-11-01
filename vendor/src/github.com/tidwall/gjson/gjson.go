@@ -187,6 +187,16 @@ func (t Result) Array() []Result {
 	return r.a
 }
 
+// IsObject returns true if the result value is a JSON object.
+func (t Result) IsObject() bool {
+	return t.Type == JSON && len(t.Raw) > 0 && t.Raw[0] == '{'
+}
+
+// IsObject returns true if the result value is a JSON array.
+func (t Result) IsArray() bool {
+	return t.Type == JSON && len(t.Raw) > 0 && t.Raw[0] == '['
+}
+
 // ForEach iterates through values.
 // If the result represents a non-existent value, then no values will be iterated.
 // If the result is an Object, the iterator will pass the key and value of each item.
@@ -1438,7 +1448,7 @@ func unescape(json string) string { //, error) {
 				i += 5
 				if utf16.IsSurrogate(r) {
 					// need another code
-					if len(json) >= 6 && json[i] == '\\' && json[i+1] == 'u' {
+					if len(json[i:]) >= 6 && json[i] == '\\' && json[i+1] == 'u' {
 						// we expect it to be correct so just consume it
 						r = utf16.DecodeRune(r, runeit(json[i+2:]))
 						i += 6
@@ -1780,7 +1790,6 @@ next_key:
 					usedPaths++
 					continue
 				}
-
 				// try to match the key to the path
 				// this is spaghetti code but the idea is to minimize
 				// calls and variable assignments when comparing the
@@ -1800,6 +1809,9 @@ next_key:
 						}
 					}
 					if len(paths[j]) <= len(key) || kplen != 0 {
+						if len(paths[j]) != i {
+							goto nomatch
+						}
 						// matched and at the end of the path
 						goto match_atend
 					}
@@ -1838,6 +1850,9 @@ next_key:
 			nomatch: // noop label
 			}
 
+			if !hasMatch && i < len(json) && json[i] == '}' {
+				return i + 1, true
+			}
 			if !parsedVal {
 				if hasMatch {
 					// we found a match and the value has not been parsed yet.
@@ -2084,6 +2099,8 @@ var validate uintptr = 1
 
 // UnmarshalValidationEnabled provides the option to disable JSON validation
 // during the Unmarshal routine. Validation is enabled by default.
+//
+// Deprecated: Use encoder/json.Unmarshal instead
 func UnmarshalValidationEnabled(enabled bool) {
 	if enabled {
 		atomic.StoreUintptr(&validate, 1)
@@ -2098,6 +2115,8 @@ func UnmarshalValidationEnabled(enabled bool) {
 // gjson.Unmarshal will automatically attempt to convert JSON values to any Go
 // type. For example, the JSON string "100" or the JSON number 100 can be equally
 // assigned to Go string, int, byte, uint64, etc. This rule applies to all types.
+//
+// Deprecated: Use encoder/json.Unmarshal instead
 func Unmarshal(data []byte, v interface{}) error {
 	if atomic.LoadUintptr(&validate) == 1 {
 		_, ok := validpayload(data, 0)
