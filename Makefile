@@ -11,7 +11,7 @@ self:   prep
 	cp -r vendor/src/* src/
 
 rmdeps:
-	if test -d src; then rm -rf src; fi 
+	if test -d src; then rm -rf src; fi
 
 deps:
 	@GOPATH=$(GOPATH) go get -u "github.com/facebookgo/atomicfile"
@@ -35,3 +35,17 @@ bin:	self
 	@GOPATH=$(GOPATH) go build -o bin/wof-concordances-list cmd/wof-concordances-list.go
 	@GOPATH=$(GOPATH) go build -o bin/wof-concordances-write cmd/wof-concordances-write.go
 	@GOPATH=$(GOPATH) go build -o bin/wof-build-concordances cmd/wof-build-concordances.go
+
+build-dist:
+	OS=darwin make build-dist-os
+	OS=windows make build-dist-os
+	OS=linux make build-dist-os
+
+build-dist-os:
+	mkdir -p dist/$(OS)
+	GOOS=$(OS) GOPATH=$(GOPATH) GOARCH=386 go build -o dist/$(OS)/wof-concordances-list cmd/wof-concordances-list.go
+	GOOS=$(OS) GOPATH=$(GOPATH) GOARCH=386 go build -o dist/$(OS)/wof-concordances-write cmd/wof-concordances-write.go
+	GOOS=$(OS) GOPATH=$(GOPATH) GOARCH=386 go build -o dist/$(OS)/wof-build-concordances cmd/wof-build-concordances.go
+	cd dist/$(OS) && shasum wof-concordances-list > wof-concordances-list.sha1.txt
+	cd dist/$(OS) && shasum wof-concordances-write > wof-concordances-write.sha1.txt
+	cd dist/$(OS) && shasum wof-build-concordances > wof-build-concordances.sha1.txt
