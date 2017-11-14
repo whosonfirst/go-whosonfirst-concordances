@@ -46,6 +46,6 @@ build-dist-os:
 	GOOS=$(OS) GOPATH=$(GOPATH) GOARCH=386 go build -o dist/$(OS)/wof-concordances-list cmd/wof-concordances-list.go
 	GOOS=$(OS) GOPATH=$(GOPATH) GOARCH=386 go build -o dist/$(OS)/wof-concordances-write cmd/wof-concordances-write.go
 	GOOS=$(OS) GOPATH=$(GOPATH) GOARCH=386 go build -o dist/$(OS)/wof-build-concordances cmd/wof-build-concordances.go
-	cd dist/$(OS) && shasum wof-concordances-list > wof-concordances-list.sha1.txt
-	cd dist/$(OS) && shasum wof-concordances-write > wof-concordances-write.sha1.txt
-	cd dist/$(OS) && shasum wof-build-concordances > wof-build-concordances.sha1.txt
+	cd dist/$(OS) && shasum -a 256 wof-concordances-list > wof-concordances-list.sha256
+	cd dist/$(OS) && shasum -a 256 wof-concordances-write > wof-concordances-write.sha256
+	cd dist/$(OS) && shasum -a 256 wof-build-concordances > wof-build-concordances.sha256
