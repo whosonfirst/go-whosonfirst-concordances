@@ -36,7 +36,7 @@ bin:	self
 	@GOPATH=$(GOPATH) go build -o bin/wof-concordances-write cmd/wof-concordances-write.go
 	@GOPATH=$(GOPATH) go build -o bin/wof-build-concordances cmd/wof-build-concordances.go
 
-build-dist:
+build-dist: self
 	OS=darwin make build-dist-os
 	OS=windows make build-dist-os
 	OS=linux make build-dist-os
