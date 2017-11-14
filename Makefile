@@ -36,16 +36,15 @@ bin:	self
 	@GOPATH=$(GOPATH) go build -o bin/wof-concordances-write cmd/wof-concordances-write.go
 	@GOPATH=$(GOPATH) go build -o bin/wof-build-concordances cmd/wof-build-concordances.go
 
-build-dist: self
-	OS=darwin make build-dist-os
-	OS=windows make build-dist-os
-	OS=linux make build-dist-os
+dist: self
+	OS=darwin make dist-os
+	OS=windows make dist-os
+	OS=linux make dist-os
 
-build-dist-os:
+dist-os:
 	mkdir -p dist/$(OS)
-	GOOS=$(OS) GOPATH=$(GOPATH) GOARCH=386 go build -o dist/$(OS)/wof-concordances-list cmd/wof-concordances-list.go
-	GOOS=$(OS) GOPATH=$(GOPATH) GOARCH=386 go build -o dist/$(OS)/wof-concordances-write cmd/wof-concordances-write.go
 	GOOS=$(OS) GOPATH=$(GOPATH) GOARCH=386 go build -o dist/$(OS)/wof-build-concordances cmd/wof-build-concordances.go
-	cd dist/$(OS) && shasum -a 256 wof-concordances-list > wof-concordances-list.sha256
-	cd dist/$(OS) && shasum -a 256 wof-concordances-write > wof-concordances-write.sha256
 	cd dist/$(OS) && shasum -a 256 wof-build-concordances > wof-build-concordances.sha256
+
+rmdist:
+	if test -d dist; then rm -rf dist; fi
