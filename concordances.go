@@ -1,24 +1,20 @@
 package concordances
 
 import (
-       "context"
+	"context"
 	"encoding/csv"
 	_ "errors"
-	"github.com/tidwall/gjson"
-		"github.com/whosonfirst/go-whosonfirst-crawl"
 	"github.com/whosonfirst/go-whosonfirst-geojson-v2/feature"
-	"github.com/whosonfirst/go-whosonfirst-geojson-v2/properties/whosonfirst"	
-	"github.com/whosonfirst/go-whosonfirst-index"	
+	"github.com/whosonfirst/go-whosonfirst-geojson-v2/properties/whosonfirst"
+	"github.com/whosonfirst/go-whosonfirst-index"
 	"io"
-	"io/ioutil"
 	_ "log"
-	"os"
 	"sync"
 )
 
 type CrawlFunc func(concordance map[string]string) error
 
-func ListConcordances(mode string, sources... string) ([]string, error) {
+func ListConcordances(mode string, sources ...string) ([]string, error) {
 
 	tmp := make(map[string]int)
 	concordances := make([]string, 0)
@@ -38,7 +34,7 @@ func ListConcordances(mode string, sources... string) ([]string, error) {
 		if err != nil {
 			return err
 		}
-		
+
 		mu.Lock()
 
 		for src, _ := range c {
@@ -52,18 +48,18 @@ func ListConcordances(mode string, sources... string) ([]string, error) {
 	idx, err := index.NewIndexer(mode, cb)
 
 	if err != nil {
-	   	return concordances, err
+		return concordances, err
 	}
 
 	for _, src := range sources {
-	
+
 		err := idx.IndexPath(src)
 
 		if err != nil {
 			return concordances, err
 		}
 	}
-	
+
 	for name, _ := range tmp {
 		concordances = append(concordances, name)
 	}
@@ -71,9 +67,9 @@ func ListConcordances(mode string, sources... string) ([]string, error) {
 	return concordances, nil
 }
 
-func WriteConcordances(root string, out io.Writer) error {
+func WriteConcordances(out io.Writer, mode string, sources ...string) error {
 
-	possible, err := ListConcordances(root)
+	possible, err := ListConcordances(mode, sources...)
 
 	if err != nil {
 		return err
@@ -85,19 +81,31 @@ func WriteConcordances(root string, out io.Writer) error {
 
 	mu := sync.Mutex{}
 
-	dothis := func(concordances map[string]string) error {
+	cb := func(fh io.Reader, ctx context.Context, args ...interface{}) error {
+
+		f, err := feature.LoadFeatureFromReader(fh)
+
+		if err != nil {
+			return err
+		}
+
+		c, err := whosonfirst.Concordances(f)
+
+		if err != nil {
+			return err
+		}
 
 		row := make([]string, 0)
 		matches := 0
-
+		
 		for _, key := range possible {
 
-			value, ok := concordances[key]
+			value, ok := c[key]
 
 			if ok {
-				matches += 1
+			   matches += 1
 			} else {
-				value = ""
+			   value = ""
 			}
 
 			row = append(row, value)
@@ -112,65 +120,20 @@ func WriteConcordances(root string, out io.Writer) error {
 		return nil
 	}
 
-	err = CrawlConcordances(root, dothis)
+	idx, err := index.NewIndexer(mode, cb)
 
 	if err != nil {
 		return err
 	}
 
-	writer.Flush()
-	return nil
-}
+	for _, src := range sources {
 
-func CrawlConcordances(root string, dothis CrawlFunc) error {
-
-	callback := func(source string, info os.FileInfo) error {
-
-		if info.IsDir() {
-			return nil
-		}
-
-		concordances, err := LoadConcordances(source)
+		err := idx.IndexPath(src)
 
 		if err != nil {
 			return err
 		}
-
-		return dothis(concordances)
 	}
 
-	c := crawl.NewCrawler(root)
-	return c.Crawl(callback)
-}
-
-func LoadConcordances(path string) (map[string]string, error) {
-
-	concordances := make(map[string]string)
-
-	fh, err := os.Open(path)
-
-	if err != nil {
-		return concordances, err
-	}
-
-	feature, err := ioutil.ReadAll(fh)
-
-	if err != nil {
-		return concordances, err
-	}
-
-	r := gjson.GetBytes(feature, "properties.wof:concordances")
-
-	if !r.Exists() {
-		return concordances, nil
-	}
-
-	for k, v := range r.Map() {
-		concordances[k] = v.String()
-	}
-
-	r = gjson.GetBytes(feature, "properties.wof:id")
-	concordances["wof:id"] = r.String()
-
-	return concordances, nil
+	return nil
 }

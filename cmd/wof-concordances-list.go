@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 	"runtime"
-	"strings"		
+	"strings"
 )
 
 func main() {
@@ -16,7 +16,7 @@ func main() {
 	var procs = flag.Int("processes", runtime.NumCPU()*2, "Number of concurrent processes to use")
 
 	runtime.GOMAXPROCS(*procs)
-	
+
 	flag.Parse()
 
 	sources := flag.Args()
