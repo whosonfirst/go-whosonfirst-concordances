@@ -15,38 +15,6 @@ import (
 	"sync"
 )
 
-func load_feature(fh io.Reader, ctx context.Context) (geojson.Feature, error) {
-
-	ok, err := utils.IsPrincipalWOFRecord(fh, ctx)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if !ok {
-		return nil, nil
-	}
-
-	f, err := feature.LoadFeatureFromReader(fh)
-
-	// log.Println(f)
-
-	if err != nil {
-
-		path, p_err := index.PathForContext(ctx)
-
-		if p_err != nil {
-			msg := fmt.Sprintf("%s (failed to determine path for filehandle because %s)", err, p_err)
-			return nil, errors.New(msg)
-		}
-
-		msg := fmt.Sprintf("failed to load %s because %s", path, err)
-		return nil, errors.New(msg)
-	}
-
-	return f, nil
-}
-
 func ListConcordances(mode string, sources ...string) ([]string, error) {
 
 	tmp := make(map[string]int)
@@ -103,11 +71,15 @@ func ListConcordances(mode string, sources ...string) ([]string, error) {
 
 func WriteConcordances(out io.Writer, mode string, sources ...string) error {
 
+	// please remove this step... https://github.com/whosonfirst/go-whosonfirst-concordances/issues/5
+
 	possible, err := ListConcordances(mode, sources...)
 
 	if err != nil {
 		return err
 	}
+
+	possible = append(possible, "wof:id")
 
 	writer := csv.NewWriter(out)
 	writer.Write(possible)
@@ -132,6 +104,8 @@ func WriteConcordances(out io.Writer, mode string, sources ...string) error {
 		if err != nil {
 			return err
 		}
+
+		c["wof:id"] = f.Id()
 
 		row := make([]string, 0)
 		matches := 0
@@ -174,4 +148,34 @@ func WriteConcordances(out io.Writer, mode string, sources ...string) error {
 	}
 
 	return nil
+}
+
+func load_feature(fh io.Reader, ctx context.Context) (geojson.Feature, error) {
+
+	ok, err := utils.IsPrincipalWOFRecord(fh, ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !ok {
+		return nil, nil
+	}
+
+	f, err := feature.LoadFeatureFromReader(fh)
+
+	if err != nil {
+
+		path, p_err := index.PathForContext(ctx)
+
+		if p_err != nil {
+			msg := fmt.Sprintf("%s (failed to determine path for filehandle because %s)", err, p_err)
+			return nil, errors.New(msg)
+		}
+
+		msg := fmt.Sprintf("failed to load %s because %s", path, err)
+		return nil, errors.New(msg)
+	}
+
+	return f, nil
 }
