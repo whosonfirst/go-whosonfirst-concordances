@@ -6,7 +6,6 @@ import (
 	"github.com/facebookgo/atomicfile"
 	"github.com/whosonfirst/go-whosonfirst-concordances"
 	"github.com/whosonfirst/go-whosonfirst-repo"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -17,7 +16,7 @@ import (
 func main() {
 
 	mode := flag.String("mode", "repo", "")
-	out := flag.String("outfile", "", "Where to store metafiles. If empty then assume metafile are created in a child folder of 'repo' called 'meta'.")
+	out := flag.String("outfile", "", "")
 
 	var procs = flag.Int("processes", runtime.NumCPU()*2, "Number of concurrent processes to use")
 
@@ -26,12 +25,6 @@ func main() {
 	runtime.GOMAXPROCS(*procs)
 
 	sources := flag.Args()
-
-	var fh io.Writer
-
-	if *out == "" {
-		fh = os.Stdout
-	}
 
 	if *mode == "repo" && len(sources) == 0 {
 
@@ -108,24 +101,28 @@ func main() {
 
 		fname = strings.Replace(fname, "-all-", "-", -1)
 
-		outfile := filepath.Join(abs_meta, fname)
+		*out = filepath.Join(abs_meta, fname)
 
-		f, err := atomicfile.New(outfile, os.FileMode(0644))
-
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		fh = f
+		sources = append(sources, abs_repo)
 	}
 
-	err := concordances.WriteConcordances(fh, *mode, sources...)
+	if *out == "" {
+		log.Fatal("missing outfile")
+	}
+
+	fh, err := atomicfile.New(*out, os.FileMode(0644))
 
 	if err != nil {
-		// fh.Abort()
 		log.Fatal(err)
 	}
 
-	// fh.Close()
+	err = concordances.WriteConcordances(fh, *mode, sources...)
+
+	if err != nil {
+		fh.Abort()
+		log.Fatal(err)
+	}
+
+	fh.Close()
 	os.Exit(0)
 }
