@@ -3,7 +3,6 @@ package concordances
 import (
 	"context"
 	"encoding/csv"
-	_ "errors"
 	"github.com/whosonfirst/go-whosonfirst-geojson-v2/feature"
 	"github.com/whosonfirst/go-whosonfirst-geojson-v2/properties/whosonfirst"
 	"github.com/whosonfirst/go-whosonfirst-index"
@@ -11,8 +10,6 @@ import (
 	_ "log"
 	"sync"
 )
-
-type CrawlFunc func(concordance map[string]string) error
 
 func ListConcordances(mode string, sources ...string) ([]string, error) {
 
