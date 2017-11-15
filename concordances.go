@@ -3,13 +3,49 @@ package concordances
 import (
 	"context"
 	"encoding/csv"
+	"errors"
+	"fmt"
+	"github.com/whosonfirst/go-whosonfirst-geojson-v2"
 	"github.com/whosonfirst/go-whosonfirst-geojson-v2/feature"
 	"github.com/whosonfirst/go-whosonfirst-geojson-v2/properties/whosonfirst"
 	"github.com/whosonfirst/go-whosonfirst-index"
+	"github.com/whosonfirst/go-whosonfirst-index/utils"
 	"io"
 	_ "log"
 	"sync"
 )
+
+func load_feature(fh io.Reader, ctx context.Context) (geojson.Feature, error) {
+
+	ok, err := utils.IsPrincipalWOFRecord(fh, ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if !ok {
+		return nil, nil
+	}
+
+	f, err := feature.LoadFeatureFromReader(fh)
+
+	// log.Println(f)
+
+	if err != nil {
+
+		path, p_err := index.PathForContext(ctx)
+
+		if p_err != nil {
+			msg := fmt.Sprintf("%s (failed to determine path for filehandle because %s)", err, p_err)
+			return nil, errors.New(msg)
+		}
+
+		msg := fmt.Sprintf("failed to load %s because %s", path, err)
+		return nil, errors.New(msg)
+	}
+
+	return f, nil
+}
 
 func ListConcordances(mode string, sources ...string) ([]string, error) {
 
@@ -20,10 +56,14 @@ func ListConcordances(mode string, sources ...string) ([]string, error) {
 
 	cb := func(fh io.Reader, ctx context.Context, args ...interface{}) error {
 
-		f, err := feature.LoadFeatureFromReader(fh)
+		f, err := load_feature(fh, ctx)
 
 		if err != nil {
 			return err
+		}
+
+		if f == nil {
+			return nil
 		}
 
 		c, err := whosonfirst.Concordances(f)
@@ -48,13 +88,10 @@ func ListConcordances(mode string, sources ...string) ([]string, error) {
 		return concordances, err
 	}
 
-	for _, src := range sources {
+	err = idx.IndexPaths(sources)
 
-		err := idx.IndexPath(src)
-
-		if err != nil {
-			return concordances, err
-		}
+	if err != nil {
+		return concordances, err
 	}
 
 	for name, _ := range tmp {
@@ -80,10 +117,14 @@ func WriteConcordances(out io.Writer, mode string, sources ...string) error {
 
 	cb := func(fh io.Reader, ctx context.Context, args ...interface{}) error {
 
-		f, err := feature.LoadFeatureFromReader(fh)
+		f, err := load_feature(fh, ctx)
 
 		if err != nil {
 			return err
+		}
+
+		if f == nil {
+			return nil
 		}
 
 		c, err := whosonfirst.Concordances(f)
@@ -94,15 +135,15 @@ func WriteConcordances(out io.Writer, mode string, sources ...string) error {
 
 		row := make([]string, 0)
 		matches := 0
-		
+
 		for _, key := range possible {
 
 			value, ok := c[key]
 
 			if ok {
-			   matches += 1
+				matches += 1
 			} else {
-			   value = ""
+				value = ""
 			}
 
 			row = append(row, value)

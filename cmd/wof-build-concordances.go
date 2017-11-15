@@ -16,7 +16,7 @@ import (
 func main() {
 
 	mode := flag.String("mode", "repo", "")
-	
+
 	root := flag.String("repo", "", "Where to read data (to create metafiles) from. If empty then the code will assume the current working directory.")
 	out := flag.String("outfile", "", "Where to store metafiles. If empty then assume metafile are created in a child folder of 'repo' called 'meta'.")
 
@@ -113,7 +113,7 @@ func main() {
 	}
 
 	sources := flag.Args()
-	
+
 	err = concordances.WriteConcordances(fh, *mode, sources...)
 
 	if err != nil {
