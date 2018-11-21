@@ -52,7 +52,8 @@ func main() {
 			log.Fatal(fmt.Sprintf("Invalid repo directory (%s)", abs_repo))
 		}
 
-		r, err := repo.NewDataRepoFromPath(abs_repo)
+		r_opts := repo.DefaultFilenameOptions()
+		r, err := repo.NewDataRepoFromPath(abs_repo, r_opts)
 
 		if err != nil {
 			log.Fatal(err)
