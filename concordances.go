@@ -27,10 +27,6 @@ func ListKeys(ctx context.Context, iterator_uri string, iterator_sources ...stri
 
 		c := properties.Concordances(body)
 
-		if err != nil {
-			return err
-		}
-
 		for src, _ := range c {
 			sources.Store(src, true)
 		}
