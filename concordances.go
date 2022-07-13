@@ -1,272 +1,62 @@
 package concordances
 
 import (
-	"bufio"
 	"context"
-	"encoding/csv"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"github.com/whosonfirst/go-whosonfirst-geojson-v2"
-	"github.com/whosonfirst/go-whosonfirst-geojson-v2/feature"
-	"github.com/whosonfirst/go-whosonfirst-geojson-v2/properties/whosonfirst"
-	"github.com/whosonfirst/go-whosonfirst-index"
-	"github.com/whosonfirst/go-whosonfirst-index/utils"
+	"github.com/whosonfirst/go-whosonfirst-feature/properties"
+	"github.com/whosonfirst/go-whosonfirst-iterate/v2/iterator"
 	"io"
-	"io/ioutil"
-	_ "log"
-	"os"
 	"sort"
-	"strings"
 	"sync"
 )
 
-func ListConcordances(mode string, sources ...string) ([]string, error) {
+// ListKeys() returns the list of unique keys for all the concordances found in 'iterator_sources'.
+// 'iterator_uri' is expected to be a valid `whosonfirst/go-whosonfirst-iterate/v2` URI and 'iterator_sources'
+// a list of URIs to be crawled.
+func ListKeys(ctx context.Context, iterator_uri string, iterator_sources ...string) ([]string, error) {
 
-	tmp := make(map[string]int)
-	concordances := make([]string, 0)
+	sources := new(sync.Map)
 
-	mu := sync.Mutex{}
+	iter_cb := func(ctx context.Context, path string, r io.ReadSeeker, args ...interface{}) error {
 
-	cb := func(fh io.Reader, ctx context.Context, args ...interface{}) error {
+		body, err := io.ReadAll(r)
 
-		f, err := load_feature(fh, ctx)
+		if err != nil {
+			return fmt.Errorf("Failed to read %s, %w", path, err)
+		}
+
+		c := properties.Concordances(body)
 
 		if err != nil {
 			return err
 		}
-
-		if f == nil {
-			return nil
-		}
-
-		c, err := whosonfirst.Concordances(f)
-
-		if err != nil {
-			return err
-		}
-
-		mu.Lock()
 
 		for src, _ := range c {
-			tmp[src] += 1
+			sources.Store(src, true)
 		}
-
-		mu.Unlock()
-		return nil
-	}
-
-	idx, err := index.NewIndexer(mode, cb)
-
-	if err != nil {
-		return concordances, err
-	}
-
-	err = idx.IndexPaths(sources)
-
-	if err != nil {
-		return concordances, err
-	}
-
-	for name, _ := range tmp {
-		concordances = append(concordances, name)
-	}
-
-	return concordances, nil
-}
-
-func WriteConcordances(out io.Writer, mode string, sources ...string) error {
-
-	// we do a first pass over all the files to build a keys dictionary
-	// mapping (concordance) source and count and for every non-zero length
-	// concordance dictionary we serialize the data to a tmpfile which we
-	// then re-read and dump as a CSV file using the keys dictionary to
-	// generate the CSV header (20171114/thisisaaronland)
-
-	tmpfile, err := ioutil.TempFile("", "concordances")
-
-	if err != nil {
-		return err
-	}
-
-	defer os.Remove(tmpfile.Name())
-
-	keys := make(map[string]int)
-
-	mu := sync.Mutex{}
-
-	cb := func(fh io.Reader, ctx context.Context, args ...interface{}) error {
-
-		f, err := load_feature(fh, ctx)
-
-		if err != nil {
-			return err
-		}
-
-		if f == nil {
-			return nil
-		}
-
-		c, err := whosonfirst.Concordances(f)
-
-		if err != nil {
-			return err
-		}
-
-		mu.Lock()
-		defer mu.Unlock()
-
-		added := 0
-
-		for k, _ := range c {
-
-			_, ok := keys[k]
-
-			if !ok {
-				keys[k] = 0
-			}
-
-			keys[k] += 1
-			added += 1
-		}
-
-		if added == 0 {
-			return nil
-		}
-
-		// this is a valid concordance so ensure that
-		// the current wof:id is included
-
-		// remember the interface for the geojson.Feature
-		// Id() method is to return a string and not a
-		// WOF-ish int64 (which would confuse the type
-		// definition for whosonfirst.WOFConcordances
-
-		c["wof:id"] = f.Id()
-
-		_, ok := keys["wof:id"]
-
-		if !ok {
-			keys["wof:id"] = 0
-		}
-
-		keys["wof:id"] += 1
-
-		enc_c, err := json.Marshal(c)
-
-		if err != nil {
-			return nil
-		}
-
-		tmpfile.Write(enc_c)
-		tmpfile.Write([]byte("\n"))
 
 		return nil
 	}
 
-	// here is where we plow through all the data
-
-	idx, err := index.NewIndexer(mode, cb)
+	iter, err := iterator.NewIterator(ctx, iterator_uri, iter_cb)
 
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("Failed to create iterator, %w", err)
 	}
 
-	err = idx.IndexPaths(sources)
+	err = iter.IterateURIs(ctx, iterator_sources...)
 
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("Failed to err iterate URIs, %w", err)
 	}
 
-	// here is where we rewind the tempfile and generate
-	// a (CSV) header
+	concordances_keys := make([]string, 0)
 
-	tmpfile.Seek(0, 0)
+	sources.Range(func(k interface{}, v interface{}) bool {
+		concordances_keys = append(concordances_keys, k.(string))
+		return true
+	})
 
-	header := make([]string, 0)
-
-	for k, _ := range keys {
-		header = append(header, k)
-	}
-
-	sort.Sort(sort.StringSlice(header))
-
-	writer := csv.NewWriter(out)
-	writer.Write(header)
-	writer.Flush()
-
-	// here is where we re-read the tempfile and dump all the
-	// concordances
-
-	scanner := bufio.NewScanner(tmpfile)
-
-	for scanner.Scan() {
-
-		var c whosonfirst.WOFConcordances
-
-		raw := scanner.Text()
-		dec := json.NewDecoder(strings.NewReader(raw))
-
-		for {
-
-			err := dec.Decode(&c)
-
-			if err == io.EOF {
-				break
-			}
-
-			if err != nil {
-				return err
-			}
-		}
-
-		out := make([]string, 0)
-
-		for _, k := range header {
-
-			v, ok := c[k]
-
-			if !ok {
-				v = ""
-			}
-
-			out = append(out, v)
-		}
-
-		writer.Write(out)
-		writer.Flush()
-	}
-
-	writer.Flush()
-	return nil
-}
-
-func load_feature(fh io.Reader, ctx context.Context) (geojson.Feature, error) {
-
-	ok, err := utils.IsPrincipalWOFRecord(fh, ctx)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if !ok {
-		return nil, nil
-	}
-
-	f, err := feature.LoadFeatureFromReader(fh)
-
-	if err != nil {
-
-		path, p_err := index.PathForContext(ctx)
-
-		if p_err != nil {
-			msg := fmt.Sprintf("%s (failed to determine path for filehandle because %s)", err, p_err)
-			return nil, errors.New(msg)
-		}
-
-		msg := fmt.Sprintf("failed to load %s because %s", path, err)
-		return nil, errors.New(msg)
-	}
-
-	return f, nil
+	sort.Strings(concordances_keys)
+	return concordances_keys, nil
 }
