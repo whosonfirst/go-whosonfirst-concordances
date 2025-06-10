@@ -38,8 +38,8 @@ github.com/aaronland/go-json-query
 # github.com/aaronland/go-roster v1.0.0
 ## explicit; go 1.16
 github.com/aaronland/go-roster
-# github.com/cloudflare/circl v1.3.7
-## explicit; go 1.19
+# github.com/cloudflare/circl v1.6.1
+## explicit; go 1.22.0
 github.com/cloudflare/circl/dh/x25519
 github.com/cloudflare/circl/dh/x448
 github.com/cloudflare/circl/ecc/goldilocks
@@ -204,12 +204,14 @@ github.com/whosonfirst/walk
 ## explicit; go 1.16
 github.com/xanzy/ssh-agent
 # golang.org/x/crypto v0.36.0
-## explicit; go 1.23
+## explicit; go 1.23.0
 golang.org/x/crypto/argon2
 golang.org/x/crypto/blake2b
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/cast5
 golang.org/x/crypto/chacha20
+golang.org/x/crypto/cryptobyte
+golang.org/x/crypto/cryptobyte/asn1
 golang.org/x/crypto/curve25519
 golang.org/x/crypto/hkdf
 golang.org/x/crypto/internal/alias
@@ -229,7 +231,7 @@ golang.org/x/crypto/ssh/knownhosts
 ## explicit; go 1.18
 golang.org/x/mod/semver
 # golang.org/x/net v0.38.0
-## explicit; go 1.23
+## explicit; go 1.23.0
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/internal/socks
@@ -242,7 +244,7 @@ golang.org/x/oauth2/internal
 ## explicit; go 1.18
 golang.org/x/sync/errgroup
 # golang.org/x/sys v0.31.0
-## explicit; go 1.23
+## explicit; go 1.23.0
 golang.org/x/sys/cpu
 golang.org/x/sys/execabs
 golang.org/x/sys/unix
