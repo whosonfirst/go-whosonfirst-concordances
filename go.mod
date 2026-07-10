@@ -1,6 +1,6 @@
 module github.com/whosonfirst/go-whosonfirst-concordances
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/whosonfirst/go-whosonfirst-feature v0.0.23
@@ -40,9 +40,9 @@ require (
 	github.com/whosonfirst/go-whosonfirst-iterate-git/v2 v2.1.0 // indirect
 	github.com/whosonfirst/walk v0.0.1 // indirect
 	github.com/xanzy/ssh-agent v0.3.3 // indirect
-	golang.org/x/crypto v0.45.0 // indirect
-	golang.org/x/net v0.47.0 // indirect
+	golang.org/x/crypto v0.52.0 // indirect
+	golang.org/x/net v0.54.0 // indirect
 	golang.org/x/oauth2 v0.27.0 // indirect
-	golang.org/x/sys v0.38.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )
